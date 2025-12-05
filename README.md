@@ -28,17 +28,17 @@ The AI doesn't know HTML, CSS selectors, or DOM structure - it **only sees pixel
 ┌─────────────────────────────────────────────────────┐
 │  1. Screenshot → AI (Azure computer-use-preview)    │
 │     "What do you see? What should you do next?"     │
-│                                                      │
+│                                                     │
 │  2. AI analyzes pixels and decides:                 │
 │     - ComputerCallAction: Click at (X, Y)           │
 │     - ComputerCallAction: Type "text"               │
 │     - ComputerCallAction: Scroll                    │
-│                                                      │
+│                                                     │
 │  3. ComputerUseUtil executes in Playwright:         │
 │     - page.Mouse.ClickAsync(x, y)                   │
 │     - page.Keyboard.TypeAsync(text)                 │
 │     - page.Mouse.WheelAsync(scrollY)                │
-│                                                      │
+│                                                     │
 │  4. New screenshot → back to step 1                 │
 └─────────────────────────────────────────────────────┘
 ```
