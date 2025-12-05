@@ -1,164 +1,194 @@
-# Computer Use Agent with Playwright
+# AI-Powered Computer Use Agent with Playwright
 
-This project demonstrates how to combine **Playwright browser automation** with **AI-powered Computer Use** capabilities, bridging the gap between the static screenshot approach from your previous project and real, live browser interactions.
+This project demonstrates **true AI Computer Use** by combining Azure AI's `computer-use-preview` model with Playwright browser automation. The AI **visually analyzes screenshots** and decides what to click, type, or scroll - then Playwright executes those actions in a real browser.
 
-## What This Demo Does
+## 🎯 What This Does
 
-### Current Implementation (Working)
-✅ **Playwright Automation** - Real browser control with:
-- Web navigation and search
-- Form filling and interaction
-- Screenshot capture at each step
-- Visible browser automation (non-headless)
-
-### Integration Concept (from Previous Project)
-The previous project used:
-- **Azure AI Projects** with Computer Use capabilities
-- **Static screenshots** fed to AI models
-- **Simulated actions** based on AI decisions
-
-### Combined Approach (What We've Built)
-This project shows how to combine both:
-
-1. **Playwright** provides real browser control
-2. **Screenshot capture** at each step creates a feedback loop
-3. **AI Model** (when integrated) can analyze screenshots and decide actions
-4. **Actions execute** in the real browser via Playwright
-5. **New screenshots** confirm the action worked
-6. Loop continues until task complete
-
-## How It Works
+Watch the AI navigate Yahoo Finance **by vision alone**:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    AI Computer Use Loop                  │
-└─────────────────────────────────────────────────────────┘
-
-1. Take Screenshot (Playwright)
-         ↓
-2. Send to AI Model (e.g., Claude with Computer Use)
-         ↓
-3. AI Analyzes and Decides Next Action
-         ↓
-4. Execute Action in Browser (Playwright)
-         ↓
-5. Capture New State (Screenshot)
-         ↓
-   (Loop back to step 2)
+1. AI sees screenshot of Yahoo Finance homepage
+2. AI decides: "I should click the search box at coordinates (372, 331)"
+3. Playwright clicks at those exact coordinates
+4. AI sees new screenshot showing search box is focused
+5. AI decides: "I should type 'MSFT'"
+6. Playwright types into the search box
+7. AI sees screenshot with "MSFT" typed
+8. AI decides: "I should click the search button at (567, 330)"
+9. Playwright clicks the search button
+10. AI sees results page and reports: "MSFT at $480.80, -0.06%"
 ```
 
-## Running the Demo
+The AI doesn't know HTML, CSS selectors, or DOM structure - it **only sees pixels** like a human would.
 
-```powershell
-dotnet run
+## 🔄 The Visual Analysis Loop
+
+**How It Works:**
+```
+┌─────────────────────────────────────────────────────┐
+│  1. Screenshot → AI (Azure computer-use-preview)    │
+│     "What do you see? What should you do next?"     │
+│                                                      │
+│  2. AI analyzes pixels and decides:                 │
+│     - ComputerCallAction: Click at (X, Y)           │
+│     - ComputerCallAction: Type "text"               │
+│     - ComputerCallAction: Scroll                    │
+│                                                      │
+│  3. ComputerUseUtil executes in Playwright:         │
+│     - page.Mouse.ClickAsync(x, y)                   │
+│     - page.Keyboard.TypeAsync(text)                 │
+│     - page.Mouse.WheelAsync(scrollY)                │
+│                                                      │
+│  4. New screenshot → back to step 1                 │
+└─────────────────────────────────────────────────────┘
 ```
 
-The demo will:
-1. Launch a visible Chrome browser
-2. Perform a web search on Bing
-3. Navigate to a form page
-4. Fill form fields
-5. Capture screenshots at each step (saved to `screenshots/` folder)
+## 🔧 Technical Implementation
 
-## Screenshots Captured
+### Key Breakthrough: Accessing Click Coordinates
 
-- `01_bing_homepage.png` - Initial state
-- `02_search_entered.png` - After typing query
-- `03_search_results.png` - After search completion
-- `04_form_page.png` - Form page loaded
-- `05_form_field1_filled.png` - First field filled
-- `06_form_field2_filled.png` - Second field filled (if visible)
-
-## Key Differences from Previous Project
-
-| Previous Project (Static) | This Project (Live) |
-|---------------------------|---------------------|
-| Pre-captured screenshots | Real-time screenshots |
-| Simulated browser state | Actual browser |
-| Mock form filling | Real form interaction |
-| Static file-based workflow | Dynamic browser automation |
-| AI decides based on old images | AI can control live browser |
-
-## Integration with AI Models
-
-To integrate with an AI Computer Use model:
-
-1. **After each action**, capture a screenshot
-2. **Send screenshot** to AI model with context
-3. **Receive AI decision** (click coordinates, text to type, etc.)
-4. **Execute via Playwright**:
-   ```csharp
-   await page.Mouse.ClickAsync(x, y);  // For clicks
-   await page.FillAsync(selector, text);  // For text input
-   await page.Keyboard.PressAsync(key);  // For key presses
-   ```
-5. **Capture new screenshot** and repeat
-
-## Example AI Integration (Pseudo-code)
+The preview API returns `InternalComputerActionClick` objects with **public `X` and `Y` properties**:
 
 ```csharp
-while (!taskComplete)
+// From ComputerUseUtil.cs - The critical discovery
+var actionTypeObj = action.GetType();
+var xProp = actionTypeObj.GetProperty("X", BindingFlags.Public | BindingFlags.Instance);
+var yProp = actionTypeObj.GetProperty("Y", BindingFlags.Public | BindingFlags.Instance);
+
+if (xProp != null && yProp != null)
 {
-    // Capture current state
-    byte[] screenshot = await CaptureScreenshot(page);
-    
-    // Send to AI model
-    var aiResponse = await aiModel.AnalyzeAndDecide(screenshot, taskDescription);
-    
-    // Execute AI's decision
-    switch (aiResponse.Action)
-    {
-        case "click":
-            await page.Mouse.ClickAsync(aiResponse.X, aiResponse.Y);
-            break;
-        case "type":
-            await page.Keyboard.TypeAsync(aiResponse.Text);
-            break;
-        case "navigate":
-            await page.GotoAsync(aiResponse.Url);
-            break;
-    }
-    
-    // Check if task is complete
-    taskComplete = aiResponse.IsComplete;
+    int x = Convert.ToInt32(xProp.GetValue(action));
+    int y = Convert.ToInt32(yProp.GetValue(action));
+    await page.Mouse.ClickAsync(x, y);  // Execute AI's decision
 }
 ```
 
-## Technologies Used
+### Action Types Handled
 
-- **.NET 10.0** - Latest .NET framework
-- **Microsoft.Playwright** - Browser automation
-- **C#** - Programming language
+| AI Decision | ComputerCallAction Type | Playwright Execution |
+|-------------|------------------------|---------------------|
+| Click button | `InternalComputerActionClick` | `page.Mouse.ClickAsync(x, y)` |
+| Type text | `InternalComputerActionTypeKeys` | `page.Keyboard.TypeAsync(text)` |
+| Press key | `InternalComputerActionPressKeys` | `page.Keyboard.PressAsync(key)` |
+| Scroll | `InternalComputerActionScroll` | `page.Mouse.WheelAsync(deltaY)` |
 
-## Future Enhancements
+### Architecture
 
-To fully integrate the AI capabilities from the previous project:
+**Program.cs** - AI feedback loop:
+```csharp
+// Create AI agent with Computer Use tool
+AIAgent agent = await aiProjectClient.CreateAIAgentAsync(
+    model: "computer-use-preview",  // MUST use this model
+    tools: [ResponseTool.CreateComputerTool(ComputerToolEnvironment.Browser, 1280, 720)]
+);
 
-1. Add Azure AI Projects SDK
-2. Implement Computer Use API calls
-3. Create action executor that maps AI decisions to Playwright commands
-4. Add error handling and retry logic
-5. Implement task completion detection
-6. Add multi-step task orchestration
+// Visual analysis loop
+while (!done) {
+    screenshot = await page.ScreenshotAsync();
+    response = await agent.SendMessageAsync(screenshot);
+    
+    foreach (var action in response.ComputerActions) {
+        screenshot = await ComputerUseUtil.ExecuteComputerActionAsync(action, page);
+    }
+}
+```
 
-## Benefits of This Approach
+**ComputerUseUtil.cs** - Bridges AI → Playwright:
+```csharp
+internal static async Task<byte[]> ExecuteComputerActionAsync(
+    ComputerCallAction action,
+    IPage page)
+{
+    // Execute AI's visual decision in real browser
+    await ExecuteActionOnPage(action, page);
+    
+    // Capture result for AI to see
+    return await page.ScreenshotAsync();
+}
+```
 
-✅ **Real Browser Testing** - See exactly what the AI sees and does
-✅ **Live Feedback** - Actions execute in real-time
-✅ **Screenshot Evidence** - Every step is documented
-✅ **Flexible Automation** - Can handle any web task
-✅ **AI-Guided** - Let AI figure out complex interactions
-✅ **Verifiable** - Screenshots confirm success at each step
+## ⚙️ Setup & Run
 
-## Code Structure
+### Prerequisites
+1. **Azure AI Foundry project** with `computer-use-preview` model deployed
+2. **.NET 10.0 SDK**
+3. **Playwright browsers** (auto-installs on first run)
 
-- `Program.cs` - Main entry point
-- `DemoWebSearchWithScreenshots()` - Search demonstration
-- `DemoFormFillingWithScreenshots()` - Form interaction
-- `CaptureStep()` - Screenshot utility
+### Environment Variables
+```powershell
+# Required - your Azure AI project endpoint
+$env:AZURE_FOUNDRY_PROJECT_ENDPOINT = "https://your-project.azureai.azure.com"
+```
 
-## Notes
+The model is hardcoded to `computer-use-preview` - the only model that supports Computer Use Tool.
 
-This demo intentionally uses a **simplified approach** to focus on the core concept of combining Playwright with Computer Use workflows. The previous project's Azure AI integration had API compatibility issues that would require updating to the latest SDK versions and API patterns.
+### Run
+```bash
+dotnet run
+```
 
-The key insight is: **Playwright provides the hands, AI provides the brain.**
+**What you'll see:**
+```
+🤖 AI DECIDED ACTION: Click
+   🖱️  AI wants to click at (372, 331)
+
+🤖 AI DECIDED ACTION: Type
+   💬 AI wants to type: 'MSFT'
+
+🤖 AI DECIDED ACTION: Click  
+   🖱️  AI wants to click at (567, 330)
+
+✅ AI TASK COMPLETE!
+   "MSFT at $480.80, -0.06%, High: 481.32, Low: 476.49, Volume: 21.9M"
+```
+
+## 🆚 Comparison: Static vs Live
+
+| Aspect | Microsoft Sample | This Implementation |
+|--------|-----------------|-------------------|
+| **Browser** | Simulated (PNG images) | ✅ Real Playwright automation |
+| **Screenshots** | Pre-captured files | ✅ Live `page.ScreenshotAsync()` |
+| **Clicks** | Mock coordinates | ✅ Actual `page.Mouse.ClickAsync(x, y)` |
+| **Data** | Static demo | ✅ Live Yahoo Finance prices |
+| **Navigation** | Fixed sequence | ✅ Real web interactions |
+
+Both use the **same AI visual analysis**, but this executes in a **real browser**.
+
+## 📊 Example Run Output
+
+```
+=== AI-Powered Computer Use Agent with Playwright ===
+
+✓ Browser ready at Yahoo Finance
+
+🔄 ITERATION 1 - AI Visual Analysis Cycle
+🤖 AI DECIDED ACTION: Click
+   🖱️  AI wants to click at (372, 331)
+
+🔄 ITERATION 2 - AI Visual Analysis Cycle  
+🤖 AI DECIDED ACTION: Type
+   💬 AI wants to type: 'MSFT'
+
+🔄 ITERATION 3 - AI Visual Analysis Cycle
+🤖 AI DECIDED ACTION: Click
+   🖱️  AI wants to click at (567, 330)
+
+✅ AI TASK COMPLETE!
+   Total visual analysis cycles: 12
+```
+
+## 🔑 Key Insights
+
+1. **Model matters**: Only `computer-use-preview` supports Computer Use Tool
+2. **Coordinates are public**: `InternalComputerActionClick` has `X` and `Y` properties accessible via reflection
+3. **Visual-only**: AI sees screenshots, not HTML/DOM
+4. **Iterative**: Each action → new screenshot → AI re-analyzes
+
+## 🔗 References
+
+- [Microsoft agent-framework Computer Use Sample](https://github.com/microsoft/agent-framework/tree/main/dotnet/samples/GettingStarted/FoundryAgents/FoundryAgents_Step15_ComputerUse)
+- [Azure AI Computer Use Documentation](https://learn.microsoft.com/en-us/azure/ai-services/agents/computer-use)
+
+---
+
+**Status**: ✅ Fully functional - AI successfully navigates and analyzes web pages by vision alone!
