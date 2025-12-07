@@ -78,23 +78,12 @@ internal static class ComputerUseUtil
             }
 
             // KEY - AI wants to press a key (Enter, Tab, etc.)
+            // DISABLED: Enter key doesn't work reliably - AI should click search button instead
             else if (actionType.Contains("key", StringComparison.OrdinalIgnoreCase) && action.KeyPressKeyCodes is not null)
             {
-                foreach (var keyCode in action.KeyPressKeyCodes)
-                {
-                    Console.WriteLine($"   ⌨️  AI pressing key: {keyCode}");
-                    await page.Keyboard.PressAsync(MapKeyCode(keyCode));
-                }
-                
-                // Wait for navigation if Enter was pressed
-                if (action.KeyPressKeyCodes.Any(k => k.Contains("Enter", StringComparison.OrdinalIgnoreCase)))
-                {
-                    try
-                    {
-                        await page.WaitForLoadStateAsync(Microsoft.Playwright.LoadState.NetworkIdle, new() { Timeout = 5000 });
-                    }
-                    catch { } // Timeout is okay
-                }
+                Console.WriteLine($"   ⚠️  KEY PRESS DISABLED - AI should click the search button instead");
+                Console.WriteLine($"   ⚠️  Attempted keys: {string.Join(", ", action.KeyPressKeyCodes)}");
+                // Skip key press - do nothing
             }
 
             // CLICK - AI saw something to click at specific coordinates

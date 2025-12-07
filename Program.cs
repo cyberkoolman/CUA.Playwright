@@ -54,29 +54,45 @@ internal sealed class Program
         _page = await context.NewPageAsync();
 
         // Navigate to starting page with longer timeout
-        await _page.GotoAsync("https://finance.yahoo.com", new PlaywrightLib.PageGotoOptions { Timeout = 60000 });
+        await _page.GotoAsync("https://www.duckduckgo.com", new PlaywrightLib.PageGotoOptions { Timeout = 60000 });
         await Task.Delay(2000);
-        Console.WriteLine("✓ Browser ready at Yahoo Finance\n");
+        Console.WriteLine("✓ Browser ready at DuckDuckGo\n");
 
         // Get a client to create/retrieve/delete server side agents with Azure Foundry Agents
         AIProjectClient aiProjectClient = new(new Uri(endpoint), new AzureCliCredential());
 
         const string AgentInstructions = @"
-            You are a financial research assistant with computer automation capabilities.
+            You are a web search assistant. Follow these steps EXACTLY in order:
             
-            Your task is to:
-            1. Navigate to Yahoo Finance (already loaded)
-            2. Click on the search box
-            3. Type 'MSFT' in the search box
-            4. Click the search button next to the search box
-            5. Wait for results page to load
-            6. Read and report: current price, day's change, high, low, and volume
+            STEP 1: If you see a blank DuckDuckGo search page:
+                    - Click the search box ONCE
             
-            IMPORTANT: Use clicks to interact with buttons. Be precise with your clicks.
-            Be direct and efficient. Describe what you see on the screen at each step.
+            STEP 2: If you just clicked the search box:
+                    - Type 'MSFT' ONCE (do not type again if already typed)
+            
+            STEP 3: If you typed 'MSFT' and see the search button:
+                    - Click the search button (magnifying glass icon) ONCE
+                    - DO NOT type again after clicking search button
+            
+            STEP 4: If you see search RESULTS (prices, charts, links):
+                    - STOP taking actions
+                    - READ the information at the TOP of the page
+                    - Report these details:
+                      * Current Price: $XXX.XX
+                      * Day Change: +$X.XX (+X.XX%)
+                      * Open, High, Low, Volume, Market Cap
+                      * Any visible news
+                    - Say 'TASK COMPLETE'
+            
+            CRITICAL RULES: 
+            - DO NOT type 'MSFT' more than once
+            - DO NOT click multiple times on same element
+            - Once search results appear, STOP clicking/typing and just READ
+            - NEVER use Enter key
+            - DO NOT SCROLL
         ";
 
-        const string AgentName = "FinanceAgent-MSFT";
+        const string AgentName = "DuckDuckGoSearchAgent-MSFT";
 
         // Create AIAgent with Computer Use Tool
         AIAgent agent = await aiProjectClient.CreateAIAgentAsync(
@@ -123,18 +139,18 @@ internal sealed class Program
         AgentThread thread = agent.GetNewThread();
 
         ChatMessage message = new(ChatRole.User, [
-            new TextContent("Analyze this Yahoo Finance page and search for Microsoft stock (MSFT). Look at the screenshot to find the search box, type MSFT, submit the search, then analyze and report: current price, change, high, low, and volume."),
+            new TextContent("Search for 'MSFT' on DuckDuckGo. Click search box, type MSFT, click search button. Once results load, STOP and READ the TOP of the page (DO NOT SCROLL). Report the stock information visible at the top. Say 'TASK COMPLETE' when done."),
             new DataContent(new BinaryData(initialScreenshot), "image/png")
         ]);
 
         // Initial request with screenshot - AI will LOOK at the page and decide what to do
         Console.WriteLine("🤖 AI Agent analyzing screenshot...");
-        Console.WriteLine("    The AI is LOOKING at the Yahoo Finance page");
+        Console.WriteLine("    The AI is LOOKING at the DuckDuckGo page");
         Console.WriteLine("    It will decide what to click/type based on what it SEES\n");
         AgentRunResponse runResponse = await agent.RunAsync(message, thread: thread, options: runOptions);
 
         // Main interaction loop
-        const int MaxIterations = 15;
+        const int MaxIterations = 25;  // Increased for search + comprehensive analysis
         int iteration = 0;
         string initialCallId = string.Empty;
 
@@ -173,12 +189,31 @@ internal sealed class Program
                 .SelectMany(m => m.Contents)
                 .OfType<TextContent>();
 
+            bool taskComplete = false;
             foreach (var textContent in textContents)
             {
                 if (!string.IsNullOrWhiteSpace(textContent.Text))
                 {
                     Console.WriteLine($"\n👁️  AI SEES & THINKS:");
                     Console.WriteLine($"    \"{textContent.Text}\"");
+                    
+                    // Check if AI detected CAPTCHA
+                    if (textContent.Text.Contains("CAPTCHA", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Console.WriteLine($"\n{new string('=', 70)}");
+                        Console.WriteLine("⚠️  CAPTCHA DETECTED!");
+                        Console.WriteLine("   AI cannot solve CAPTCHAs - manual intervention required");
+                        Console.WriteLine("   Please solve the CAPTCHA manually and restart the demo");
+                        Console.WriteLine(new string('=', 70));
+                        taskComplete = true;
+                    }
+                    
+                    // Check if AI says it's done
+                    if (textContent.Text.Contains("TASK COMPLETE", StringComparison.OrdinalIgnoreCase) ||
+                        textContent.Text.Contains("task is complete", StringComparison.OrdinalIgnoreCase))
+                    {
+                        taskComplete = true;
+                    }
                 }
             }
 
@@ -189,7 +224,9 @@ internal sealed class Program
                 .Select(c => (ComputerCallResponseItem)c.RawRepresentation!);
 
             ComputerCallResponseItem? firstCall = computerCalls.FirstOrDefault();
-            if (firstCall is null)
+            
+            // If AI said task is complete OR no more actions, we're done
+            if (taskComplete || firstCall is null)
             {
                 Console.WriteLine($"\n{new string('=', 70)}");
                 Console.WriteLine("✅ AI TASK COMPLETE!");
@@ -251,7 +288,7 @@ internal sealed class Program
         var page = await context.NewPageAsync();
         
         Console.WriteLine("Running basic Playwright automation...");
-        await page.GotoAsync("https://finance.yahoo.com");
+        await page.GotoAsync("https://www.duckduckgo.com");
         await Task.Delay(2000);
         
         // Search for MSFT

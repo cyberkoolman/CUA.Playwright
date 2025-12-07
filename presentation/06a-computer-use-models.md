@@ -20,15 +20,3 @@
 | **Actions** | Describes actions | ✅ Returns executable commands |
 | **Coordinates** | N/A | ✅ Returns X, Y positions |
 | **Purpose** | Conversation | ✅ Computer automation |
-
----
-
-## Why Regular Models Don't Work
-
-```csharp
-// This FAILS with gpt-4o-2024-11-20
-tools: [ResponseTool.CreateComputerTool(...)]
-// Error: Tool 'computer_use_preview' is not supported
-```
-
-Only `computer-use-preview` supports the Computer Use Tool API.
