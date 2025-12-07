@@ -159,11 +159,11 @@ Both use the **same AI visual analysis**, but this executes in a **real browser*
 ```
 === AI-Powered Computer Use Agent with Playwright ===
 
-✓ Browser ready at Yahoo Finance
+✓ Browser ready at DuckDuckGo
 
 🔄 ITERATION 1 - AI Visual Analysis Cycle
 🤖 AI DECIDED ACTION: Click
-   🖱️  AI wants to click at (372, 331)
+   🖱️  AI wants to click at (466, 60)  [search box]
 
 🔄 ITERATION 2 - AI Visual Analysis Cycle  
 🤖 AI DECIDED ACTION: Type
@@ -171,11 +171,22 @@ Both use the **same AI visual analysis**, but this executes in a **real browser*
 
 🔄 ITERATION 3 - AI Visual Analysis Cycle
 🤖 AI DECIDED ACTION: Click
-   🖱️  AI wants to click at (567, 330)
+   🖱️  AI wants to click at (916, 59)  [search button]
+
+🔄 ITERATION 4 - AI Visual Analysis Cycle
+👁️  AI SEES & THINKS:
+   "Current Price: $483.16, Change: +$2.32 (+0.48%)
+    Open: $482.515, High: $483.40, Low: $478.88
+    Volume: 26.2M, Market Cap: 3.59T
+    TASK COMPLETE"
 
 ✅ AI TASK COMPLETE!
-   Total visual analysis cycles: 12
+   Total visual analysis cycles: 4
 ```
+
+**Optimization Journey:**
+- Initial implementation: 12+ iterations (multiple redundant clicks)
+- After instruction optimization: **4 iterations** (click → type → click → read)
 
 ## 🔑 Key Insights
 
@@ -183,6 +194,19 @@ Both use the **same AI visual analysis**, but this executes in a **real browser*
 2. **Coordinates are public**: `InternalComputerActionClick` has `X` and `Y` properties accessible via reflection
 3. **Visual-only**: AI sees screenshots, not HTML/DOM
 4. **Iterative**: Each action → new screenshot → AI re-analyzes
+5. **Instruction clarity is critical**: Vague instructions cause wasted iterations
+   - ❌ "Click the search box" → AI clicks 3 times at different coordinates
+   - ✅ "Click the search box ONE TIME" → AI clicks once
+6. **Conditional instructions work better**: "If you see X, do Y" prevents repeated actions
+7. **Search engine selection matters**:
+   - Yahoo Finance: Works but limited to finance data
+   - Bing: Works but AI struggled with layout
+   - Google: **CAPTCHA blocks automation** - cannot be solved by AI
+   - DuckDuckGo: ✅ Simple layout, no CAPTCHA, best for automation
+8. **Keyboard input unreliable**: Enter key doesn't consistently trigger form submission
+   - Disable keyboard shortcuts, use click-only interaction
+9. **AI prioritizes actions over analysis**: Without explicit instructions, AI scrolls before reading
+   - Must explicitly say "DO NOT SCROLL" and "READ first"
 
 ## 🔗 References
 
