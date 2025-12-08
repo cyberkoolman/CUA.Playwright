@@ -4,19 +4,19 @@ This project demonstrates **true AI Computer Use** by combining Azure AI's `comp
 
 ## 🎯 What This Does
 
-Watch the AI navigate Yahoo Finance **by vision alone**:
+Watch the AI navigate DuckDuckGo **by vision alone**:
 
 ```
-1. AI sees screenshot of Yahoo Finance homepage
-2. AI decides: "I should click the search box at coordinates (372, 331)"
+1. AI sees screenshot of DuckDuckGo homepage
+2. AI decides: "I should click the search box at coordinates (466, 60)"
 3. Playwright clicks at those exact coordinates
 4. AI sees new screenshot showing search box is focused
 5. AI decides: "I should type 'MSFT'"
 6. Playwright types into the search box
 7. AI sees screenshot with "MSFT" typed
-8. AI decides: "I should click the search button at (567, 330)"
+8. AI decides: "I should click the search button at (916, 59)"
 9. Playwright clicks the search button
-10. AI sees results page and reports: "MSFT at $480.80, -0.06%"
+10. AI sees results page and reports: "Current Price: $483.16, Change: +$2.32 (+0.48%)"
 ```
 
 The AI doesn't know HTML, CSS selectors, or DOM structure - it **only sees pixels** like a human would.
@@ -130,16 +130,19 @@ dotnet run
 **What you'll see:**
 ```
 🤖 AI DECIDED ACTION: Click
-   🖱️  AI wants to click at (372, 331)
+   🖱️  AI wants to click at (466, 60)  [DuckDuckGo search box]
 
 🤖 AI DECIDED ACTION: Type
    💬 AI wants to type: 'MSFT'
 
 🤖 AI DECIDED ACTION: Click  
-   🖱️  AI wants to click at (567, 330)
+   🖱️  AI wants to click at (916, 59)  [search button]
 
 ✅ AI TASK COMPLETE!
-   "MSFT at $480.80, -0.06%, High: 481.32, Low: 476.49, Volume: 21.9M"
+   "Current Price: $483.16
+    Day Change: +$2.32 (+0.48%)
+    Open: $482.515, High: $483.40, Low: $478.88
+    Volume: 26.2M, Market Cap: 3.59T"
 ```
 
 ## 🆚 Comparison: Static vs Live
@@ -149,8 +152,9 @@ dotnet run
 | **Browser** | Simulated (PNG images) | ✅ Real Playwright automation |
 | **Screenshots** | Pre-captured files | ✅ Live `page.ScreenshotAsync()` |
 | **Clicks** | Mock coordinates | ✅ Actual `page.Mouse.ClickAsync(x, y)` |
-| **Data** | Static demo | ✅ Live Yahoo Finance prices |
+| **Data** | Static demo | ✅ Live DuckDuckGo search results |
 | **Navigation** | Fixed sequence | ✅ Real web interactions |
+| **CAPTCHA** | N/A | ✅ Avoided (DuckDuckGo > Google) |
 
 Both use the **same AI visual analysis**, but this executes in a **real browser**.
 
